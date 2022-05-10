@@ -1,0 +1,17 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Buggle
+Source: https://github.com/adriaandegroot/buggle.git
+
+### NOT SOURCE
+#
+#
+Files: .gitignore
+License: CC0-1.0
+Copyright: no
+
+### DOCUMENTATION
+#
+#
+Files: README.md
+License: CC-BY-SA-4.0
+Copyright: 2022 Adriaan de Groot <groot@kde.org>
