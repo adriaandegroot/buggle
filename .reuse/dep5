@@ -5,7 +5,7 @@ Source: https://github.com/adriaandegroot/buggle.git
 ### NOT SOURCE
 #
 #
-Files: .gitignore
+Files: .gitignore Cargo.toml
 License: CC0-1.0
 Copyright: no
 
