@@ -82,14 +82,30 @@ async fn get_buggle_results() -> Result<Vec<BuggleResult>, Box<dyn std::error::E
     return Ok(vec);
 }
 
-fn main() {
-    let r = get_buggle_results().ok().unwrap();
-
-    for buggle in &r {
-        match buggle.count {
-            None => println!("{} No results", buggle.id),
-            Some(n) => println!("{} count {}", buggle.id, n),
+// === Summary
+//
+// Turns the results into a simple social-media-compatible string
+// that names the bug counts.
+fn summarize_buggle( v : Vec<BuggleResult> ) -> String {
+    let mut s : String = "Daily buggle: ".to_string();
+    let mut c = v.len();
+    for buggle in &v {
+        let count_s = match buggle.count {
+            None => "?".to_string(),
+            Some(n) => format!("{}", n),
         };
+        s += &count_s;
+        if c > 1 {
+            s += "/";
+        }
+        c -= 1;
     }
 
+    if s.ends_with('/') { s.remove(1); }
+    return s;
+}
+
+fn main() {
+    let r = get_buggle_results().ok().unwrap();
+    println!("{}", summarize_buggle(r));
 }
