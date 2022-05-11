@@ -43,6 +43,9 @@ fn build_product_query(product : &str) -> hyper::Uri {
 // the query) and a Uri that does the work. Return values include
 // the ID (for reference) and an optional count. If the query
 // errors out, there is no count.
+//
+// Function get_buggle_results() performs a number of queries
+// and returns a vector with each of the results.
 struct BuggleResult {
     id: String,
     count: Option<u32>,
@@ -69,18 +72,24 @@ async fn run_query(id : String, uri : hyper::Uri) -> BuggleResult {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn get_buggle_results() -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
     let mut vec : Vec<BuggleResult> = Vec::with_capacity(5);
     vec.push(run_query("me     ".to_string(), build_assigned_query("adridg%40FreeBSD.org")).await);
     vec.push(run_query("cmake  ".to_string(), build_product_query("cmake")).await);
     vec.push(run_query("desktop".to_string(), build_assigned_query("desktop%40FreeBSD.org")).await);
     vec.push(run_query("kde    ".to_string(), build_assigned_query("kde%40FreeBSD.org")).await);
 
-    for buggle in &vec {
+    return Ok(vec);
+}
+
+fn main() {
+    let r = get_buggle_results().ok().unwrap();
+
+    for buggle in &r {
         match buggle.count {
             None => println!("{} No results", buggle.id),
             Some(n) => println!("{} count {}", buggle.id, n),
         };
     }
-    Ok(())
+
 }
