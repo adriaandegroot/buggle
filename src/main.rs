@@ -8,8 +8,6 @@
 use hyper::body::HttpBody as _;
 use hyper::Client;
 use hyper_tls::HttpsConnector;
-use std::io::stdout;
-use std::io::Write;
 
 fn build_query(q : String) -> hyper::Uri {
     let qs = format!("https://bugs.freebsd.org/bugzilla/buglist.cgi?{}&ctype=csv", q);
@@ -18,6 +16,10 @@ fn build_query(q : String) -> hyper::Uri {
 
 fn build_assigned_query(email : &str) -> hyper::Uri {
     return build_query(format!("email1={}&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&resolution=---", email));
+}
+
+fn build_product_query(product : &str) -> hyper::Uri {
+    return build_query(format!("bug_status=__open__&f0=OP&f1=OP&f2=product&f3=component&f4=alias&f5=short_desc&f7=CP&f8=CP&j1=OR&o2=substring&o3=substring&o4=substring&o5=substring&o6=substring&v2={}&v3={}&v4={}&v5={}&v6={}", product, product, product, product, product));
 }
 
 struct BuggleResult {
@@ -49,6 +51,7 @@ async fn run_query(id : String, uri : hyper::Uri) -> BuggleResult {
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut vec : Vec<BuggleResult> = Vec::with_capacity(5);
     vec.push(run_query("me     ".to_string(), build_assigned_query("adridg%40FreeBSD.org")).await);
+    vec.push(run_query("cmake  ".to_string(), build_product_query("cmake")).await);
     vec.push(run_query("desktop".to_string(), build_assigned_query("desktop%40FreeBSD.org")).await);
     vec.push(run_query("kde    ".to_string(), build_assigned_query("kde%40FreeBSD.org")).await);
 
