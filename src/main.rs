@@ -47,12 +47,16 @@ async fn run_query(id : String, uri : hyper::Uri) -> BuggleResult {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let uri = build_assigned_query("adridg%40freebsd.org");
-    let buggle = run_query("me".to_string(), uri).await;
-    match buggle.count {
-        None => println!("{} No results", buggle.id),
-        Some(n) => println!("{} count {}", buggle.id, n),
-    };
+    let mut vec : Vec<BuggleResult> = Vec::with_capacity(5);
+    vec.push(run_query("me     ".to_string(), build_assigned_query("adridg%40FreeBSD.org")).await);
+    vec.push(run_query("desktop".to_string(), build_assigned_query("desktop%40FreeBSD.org")).await);
+    vec.push(run_query("kde    ".to_string(), build_assigned_query("kde%40FreeBSD.org")).await);
 
+    for buggle in &vec {
+        match buggle.count {
+            None => println!("{} No results", buggle.id),
+            Some(n) => println!("{} count {}", buggle.id, n),
+        };
+    }
     Ok(())
 }
