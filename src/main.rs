@@ -9,6 +9,19 @@ use hyper::body::HttpBody as _;
 use hyper::Client;
 use hyper_tls::HttpsConnector;
 
+// === Query Builders
+//
+// These functions build an HTTPs Uri for querying FreeBSD's bugzilla.
+// They are intentionally simplistic, and return a query for CSV data.
+//
+// Use build_assigned_query() to query bugs assigned to a given email
+// address; keep in mind that this match is exact, and case-sensitive.
+// In particular, FreeBSD addresses are case-sensitive.
+//
+// Use build_product_query() to query bugs about a given product or port.
+// This might be a category/port name, or just a port name, and searches
+// for the given name in product, component, and short description strings
+// of the bug -- e.g. PRs that mention the name in a prominent place.
 fn build_query(q : String) -> hyper::Uri {
     let qs = format!("https://bugs.freebsd.org/bugzilla/buglist.cgi?{}&ctype=csv", q);
     return qs.parse().unwrap();
@@ -22,6 +35,14 @@ fn build_product_query(product : &str) -> hyper::Uri {
     return build_query(format!("bug_status=__open__&f0=OP&f1=OP&f2=product&f3=component&f4=alias&f5=short_desc&f7=CP&f8=CP&j1=OR&o2=substring&o3=substring&o4=substring&o5=substring&o6=substring&v2={}&v3={}&v4={}&v5={}&v6={}", product, product, product, product, product));
 }
 
+// === Query Results
+//
+// Do a single query and summarize the results.
+//
+// Queries have an associated ID (a human-readable tag describing
+// the query) and a Uri that does the work. Return values include
+// the ID (for reference) and an optional count. If the query
+// errors out, there is no count.
 struct BuggleResult {
     id: String,
     count: Option<u32>,
