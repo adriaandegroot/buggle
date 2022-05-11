@@ -25,15 +25,30 @@ struct BuggleResult {
     count: Option<u32>,
 }
 
-fn run_query(uri : hyper::Uri) -> BuggleResult {
-    return BuggleResult {id: "bad".to_string(), count: None};
+async fn run_query(id : String, uri : hyper::Uri) -> BuggleResult {
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+
+    let mut res = client.get(uri).await.ok().unwrap();
+    if res.status() != 200 {
+        return BuggleResult {id: id, count: None};
+    }
+
+    let mut count = 0;
+    while let Some(chunk) = res.body_mut().data().await {
+        let lines = chunk.ok().unwrap();
+        count += lines.split(|b| b == &10u8).count();
+    }
+    // There is a CSV header at the top, so if we got at least one line,
+    // don't count the header.
+    if count > 0 { count -= 1; }
+    return BuggleResult {id: id, count: Some(count.try_into().unwrap())};
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-
     let uri = build_assigned_query("adridg%40freebsd.org");
-    let buggle = run_query(uri);
+    let buggle = run_query("me".to_string(), uri).await;
     match buggle.count {
         None => println!("{} No results", buggle.id),
         Some(n) => println!("{} count {}", buggle.id, n),
