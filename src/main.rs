@@ -11,17 +11,33 @@ use hyper_tls::HttpsConnector;
 use std::io::stdout;
 use std::io::Write;
 
+fn build_query(q : String) -> hyper::Uri {
+    let qs = format!("https://bugs.freebsd.org/bugzilla/buglist.cgi?{}&ctype=csv", q);
+    return qs.parse().unwrap();
+}
+
+fn build_assigned_query(email : &str) -> hyper::Uri {
+    return build_query(format!("email1={}&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&resolution=---", email));
+}
+
+struct BuggleResult {
+    id: String,
+    count: Option<u32>,
+}
+
+fn run_query(uri : hyper::Uri) -> BuggleResult {
+    return BuggleResult {id: "bad".to_string(), count: None};
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let https = HttpsConnector::new();
-    let client = Client::builder().build::<_, hyper::Body>(https);
 
-    let uri = "https://bugs.freebsd.org/bugzilla/buglist.cgi?email1=adridg%40freebsd.org&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&resolution=---&ctype=csv".parse()?;
-    let mut res = client.get(uri).await?;
+    let uri = build_assigned_query("adridg%40freebsd.org");
+    let buggle = run_query(uri);
+    match buggle.count {
+        None => println!("{} No results", buggle.id),
+        Some(n) => println!("{} count {}", buggle.id, n),
+    };
 
-    println!("Hello, world! {}", res.status());
-    while let Some(chunk) = res.body_mut().data().await {
-        stdout().write_all(&chunk?)?;
-    }
     Ok(())
 }
