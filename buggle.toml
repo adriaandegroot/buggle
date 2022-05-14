@@ -31,3 +31,17 @@ match = "desktop@FreeBSD.org"
 name = "kde"
 kind = "owner"
 match = "kde@FreeBSD.org"
+
+# Authentication for social-media-posts. The keys are documented here,
+# but you really **really** should put them in buggle-auth.toml, which
+# is ignored in this repository and overrides the values here.
+
+# This is the application key and secret; obtained from the developer portal.
+[twitter-app]
+key = "application-key"
+secret = "application-secret"
+
+# This is the user key and secret for the logged-in user.
+[twitter-user]
+key = "user-key"
+secret = "user-secret"

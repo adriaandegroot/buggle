@@ -135,6 +135,7 @@ fn summarize_buggle( v : Vec<BuggleResult> ) -> String {
 fn main() {
     let settings = Config::builder()
         .add_source(config::File::with_name("buggle"))
+        .add_source(config::File::with_name("buggle-auth").required(false))
         .build()
         .unwrap();
 
