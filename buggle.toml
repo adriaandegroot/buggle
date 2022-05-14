@@ -6,7 +6,8 @@
 # Global settings. These are for testing; to get anything done you need to
 # change dry-run to @c false.
 verbose = false
-dry-run = true
+dry-run = false
+twitter = true
 
 # The queries all have a name, a kind (owner or product) and a string to match.
 # These are translated into bugzilla queries for the to-be-matched owner

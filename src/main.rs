@@ -55,6 +55,7 @@ struct BuggleResult {
 struct BuggleFlags {
     verbose: bool,
     dry_run: bool,
+    twitter: bool,
 }
 
 async fn run_query(id : String, uri : hyper::Uri, flags : &BuggleFlags) -> BuggleResult {
@@ -85,7 +86,7 @@ async fn run_query(id : String, uri : hyper::Uri, flags : &BuggleFlags) -> Buggl
 }
 
 #[tokio::main]
-async fn get_buggle_results(queries : Vec<config::Value>, flags : BuggleFlags ) -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
+async fn get_buggle_results(queries : Vec<config::Value>, flags : &BuggleFlags ) -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
     let mut vec : Vec<BuggleResult> = Vec::with_capacity(queries.len());
 
     for q in queries {
@@ -105,6 +106,15 @@ async fn get_buggle_results(queries : Vec<config::Value>, flags : BuggleFlags ) 
 
     return Ok(vec);
 }
+
+// === Social Media things
+
+#[tokio::main]
+async fn send_twit(message: String, token: egg_mode::Token) {
+    let draft = egg_mode::tweet::DraftTweet::new(message);
+    draft.send(&token).await.unwrap();
+}
+
 
 // === Summary
 //
@@ -132,6 +142,17 @@ fn summarize_buggle( v : Vec<BuggleResult> ) -> String {
     return s;
 }
 
+// === Option Handling
+//
+// There's a whole machinery for mapping things into structs
+// that doesn't match my C++ brain.
+fn optbool(settings : &Config, key : &str, d : bool) -> bool {
+return match settings.get_bool(key) {
+            Err(_) => d,
+            Ok(v) => v
+        };
+}
+
 fn main() {
     let settings = Config::builder()
         .add_source(config::File::with_name("buggle"))
@@ -140,17 +161,26 @@ fn main() {
         .unwrap();
 
     let flags = BuggleFlags{
-        verbose: match settings.get_bool("verbose") {
-            Err(_) => true,
-            Ok(v) => v
-        },
-        dry_run : match settings.get_bool("dry-run") {
-            Err(_) => true,
-            Ok(v) => v
-        },
+        verbose: optbool(&settings, "verbose", true),
+        dry_run: optbool(&settings, "dry-run", true),
+        twitter: optbool(&settings, "twitter", false),
     };
 
     let queries = settings.get_array("queries").unwrap();
-    let r = get_buggle_results(queries, flags).ok().unwrap();
-    println!("{}", summarize_buggle(r));
+    let r = get_buggle_results(queries, &flags).ok().unwrap();
+    let summary = summarize_buggle(r);
+    println!("{}", summary);
+
+    if flags.twitter {
+        let con_token = egg_mode::KeyPair::new(settings.get_string("twitter-app.key").ok().unwrap(), settings.get_string("twitter-app.secret").ok().unwrap());
+        let access_token = egg_mode::KeyPair::new(settings.get_string("twitter-user.key").ok().unwrap(), settings.get_string("twitter-user.secret").ok().unwrap());
+        let token = egg_mode::Token::Access {
+            consumer: con_token,
+            access: access_token,
+        };
+
+        if !flags.dry_run {
+            send_twit(summary, token);
+        }
+    }
 }
