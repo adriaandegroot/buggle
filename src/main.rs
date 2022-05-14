@@ -9,7 +9,6 @@ use config::Config;
 use hyper::body::HttpBody as _;
 use hyper::Client;
 use hyper_tls::HttpsConnector;
-use std::collections::HashMap;
 
 // === Query Builders
 //
@@ -53,7 +52,19 @@ struct BuggleResult {
     count: Option<u32>,
 }
 
-async fn run_query(id : String, uri : hyper::Uri) -> BuggleResult {
+struct BuggleFlags {
+    verbose: bool,
+    dry_run: bool,
+}
+
+async fn run_query(id : String, uri : hyper::Uri, flags : &BuggleFlags) -> BuggleResult {
+    if flags.verbose {
+        println!("Query for {} = {}", id, uri.to_string());
+    }
+    if flags.dry_run {
+        return BuggleResult {id: id, count: None};
+    }
+
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
 
@@ -74,7 +85,7 @@ async fn run_query(id : String, uri : hyper::Uri) -> BuggleResult {
 }
 
 #[tokio::main]
-async fn get_buggle_results(queries : Vec<config::Value>) -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
+async fn get_buggle_results(queries : Vec<config::Value>, flags : BuggleFlags ) -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
     let mut vec : Vec<BuggleResult> = Vec::with_capacity(queries.len());
 
     for q in queries {
@@ -84,9 +95,9 @@ async fn get_buggle_results(queries : Vec<config::Value>) -> Result<Vec<BuggleRe
         let id = kv.get::<String>(&"name".to_string()).unwrap().to_string();
 
         if kind == "owner".to_string() {
-            vec.push(run_query(id, build_assigned_query(smatch)).await);
+            vec.push(run_query(id, build_assigned_query(smatch), &flags).await);
         } else if kind == "product" {
-            vec.push(run_query(id, build_product_query(smatch)).await);
+            vec.push(run_query(id, build_product_query(smatch), &flags).await);
         } else {
             println!("Unknown query name={} kind={}\n", id, kind);
         }
@@ -127,7 +138,18 @@ fn main() {
         .build()
         .unwrap();
 
+    let flags = BuggleFlags{
+        verbose: match settings.get_bool("verbose") {
+            Err(_) => true,
+            Ok(v) => v
+        },
+        dry_run : match settings.get_bool("dry-run") {
+            Err(_) => true,
+            Ok(v) => v
+        },
+    };
+
     let queries = settings.get_array("queries").unwrap();
-    let r = get_buggle_results(queries).ok().unwrap();
+    let r = get_buggle_results(queries, flags).ok().unwrap();
     println!("{}", summarize_buggle(r));
 }
