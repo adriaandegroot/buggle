@@ -1,0 +1,28 @@
+# Buggle Configuration
+#
+# SPDX-FileCopyrightText: no
+# SPDX-License-Identifier: CC0-1.0
+
+# The queries all have a name, a kind (owner or product) and a string to match.
+# These are translated into bugzilla queries for the to-be-matched owner
+# or product. The name is used for display purposes.
+
+[[queries]]
+name = "me"
+kind = "owner"
+match = "adridg@FreeBSD.org"
+
+[[queries]]
+name = "cmake"
+kind = "product"
+match = "cmake"
+
+[[queries]]
+name = "desktop"
+kind = "owner"
+match = "desktop@FreeBSD.org"
+
+[[queries]]
+name = "kde"
+kind = "owner"
+match = "kde@FreeBSD.org"

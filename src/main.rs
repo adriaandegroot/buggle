@@ -5,9 +5,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2022 Adriaan de Groot <groot@kde.org>
 //
+use config::Config;
 use hyper::body::HttpBody as _;
 use hyper::Client;
 use hyper_tls::HttpsConnector;
+use std::collections::HashMap;
 
 // === Query Builders
 //
@@ -27,11 +29,11 @@ fn build_query(q : String) -> hyper::Uri {
     return qs.parse().unwrap();
 }
 
-fn build_assigned_query(email : &str) -> hyper::Uri {
+fn build_assigned_query(email : String) -> hyper::Uri {
     return build_query(format!("email1={}&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&resolution=---", email));
 }
 
-fn build_product_query(product : &str) -> hyper::Uri {
+fn build_product_query(product : String) -> hyper::Uri {
     return build_query(format!("bug_status=__open__&f0=OP&f1=OP&f2=product&f3=component&f4=alias&f5=short_desc&f7=CP&f8=CP&j1=OR&o2=substring&o3=substring&o4=substring&o5=substring&o6=substring&v2={}&v3={}&v4={}&v5={}&v6={}", product, product, product, product, product));
 }
 
@@ -72,12 +74,23 @@ async fn run_query(id : String, uri : hyper::Uri) -> BuggleResult {
 }
 
 #[tokio::main]
-async fn get_buggle_results() -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
-    let mut vec : Vec<BuggleResult> = Vec::with_capacity(5);
-    vec.push(run_query("me     ".to_string(), build_assigned_query("adridg%40FreeBSD.org")).await);
-    vec.push(run_query("cmake  ".to_string(), build_product_query("cmake")).await);
-    vec.push(run_query("desktop".to_string(), build_assigned_query("desktop%40FreeBSD.org")).await);
-    vec.push(run_query("kde    ".to_string(), build_assigned_query("kde%40FreeBSD.org")).await);
+async fn get_buggle_results(queries : Vec<config::Value>) -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
+    let mut vec : Vec<BuggleResult> = Vec::with_capacity(queries.len());
+
+    for q in queries {
+        let kv = q.into_table().unwrap();
+        let kind = kv.get::<String>(&"kind".to_string()).unwrap().to_string();
+        let smatch = kv.get::<String>(&"match".to_string()).unwrap().to_string();
+        let id = kv.get::<String>(&"name".to_string()).unwrap().to_string();
+
+        if kind == "owner".to_string() {
+            vec.push(run_query(id, build_assigned_query(smatch)).await);
+        } else if kind == "product" {
+            vec.push(run_query(id, build_product_query(smatch)).await);
+        } else {
+            println!("Unknown query name={} kind={}\n", id, kind);
+        }
+    }
 
     return Ok(vec);
 }
@@ -95,6 +108,9 @@ fn summarize_buggle( v : Vec<BuggleResult> ) -> String {
             Some(n) => format!("{}", n),
         };
         s += &count_s;
+        s += "(";
+        s += &buggle.id;
+        s += ")";
         if c > 1 {
             s += "/";
         }
@@ -106,6 +122,12 @@ fn summarize_buggle( v : Vec<BuggleResult> ) -> String {
 }
 
 fn main() {
-    let r = get_buggle_results().ok().unwrap();
+    let settings = Config::builder()
+        .add_source(config::File::with_name("buggle"))
+        .build()
+        .unwrap();
+
+    let queries = settings.get_array("queries").unwrap();
+    let r = get_buggle_results(queries).ok().unwrap();
     println!("{}", summarize_buggle(r));
 }
