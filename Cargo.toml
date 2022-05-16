@@ -10,4 +10,6 @@ config = {  version="0.13" }
 hyper = { version="0.14", features=["full"] }
 hyper-tls = { version="0.5" }
 oauth = { version = "0.5", package = "oauth1-request" }
+serde = { version = ">0" }
+serde_json = { version = ">0" }
 tokio = { version="1", features=["full"] }

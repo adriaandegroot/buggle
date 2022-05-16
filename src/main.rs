@@ -9,6 +9,7 @@ use config::Config;
 use hyper::body::HttpBody as _;
 use hyper::Client;
 use hyper_tls::HttpsConnector;
+use serde::Serialize;
 
 // === Query Builders
 //
@@ -109,21 +110,24 @@ async fn get_buggle_results(queries : Vec<config::Value>, flags : &BuggleFlags )
 
 // === Social Media things
 
+#[derive(Serialize)]
+struct TwitterStatus {
+    text : String,
+}
+
 #[tokio::main]
-async fn send_twit(text : String, token : &oauth::Token) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn send_twit_impl(text : String, token : &oauth::Token) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let uri = "https://api.twitter.com/2/tweets";
-    // There are no POST parameters, send a unit; all the data
-    // will be in JSON, which is handled as text below (and **that**
-    // only works because the summary string shouldn't contain
-    // any special characters).
+    // There are no POST parameters, send a unit; all the data is in JSON.
     let header = oauth::post(uri, &(), &token, oauth::HmacSha1);
+    let body_data = TwitterStatus { text: text };
 
     let req = hyper::Request::builder()
         .method(hyper:: Method::POST)
         .uri(uri)
         .header("content-type", "application/json")
         .header(hyper::header::AUTHORIZATION, header)
-        .body(hyper::Body::from(format!("{{\"text\": \"{}\"}}", text)))?;
+        .body(hyper::Body::from(serde_json::to_string(&body_data).unwrap()))?;
 
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
@@ -133,6 +137,9 @@ async fn send_twit(text : String, token : &oauth::Token) -> Result<(), Box<dyn s
     return Ok(());
 }
 
+fn send_twit(text : String, token : &oauth::Token) {
+    send_twit_impl(text, token).ok();
+}
 
 // === Summary
 //
