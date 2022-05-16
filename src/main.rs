@@ -25,16 +25,22 @@ use std::env;
 // This might be a category/port name, or just a port name, and searches
 // for the given name in product, component, and short description strings
 // of the bug -- e.g. PRs that mention the name in a prominent place.
-fn build_query(q : String) -> hyper::Uri {
-    let qs = format!("https://bugs.freebsd.org/bugzilla/buglist.cgi?{}&ctype=csv", q);
+fn build_query(q: String) -> hyper::Uri {
+    let qs = format!(
+        "https://bugs.freebsd.org/bugzilla/buglist.cgi?{}&ctype=csv",
+        q
+    );
     return qs.parse().unwrap();
 }
 
-fn build_assigned_query(email : String) -> hyper::Uri {
-    return build_query(format!("email1={}&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&resolution=---", email));
+fn build_assigned_query(email: String) -> hyper::Uri {
+    return build_query(format!(
+        "email1={}&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&resolution=---",
+        email
+    ));
 }
 
-fn build_product_query(product : String) -> hyper::Uri {
+fn build_product_query(product: String) -> hyper::Uri {
     return build_query(format!("bug_status=__open__&f0=OP&f1=OP&f2=product&f3=component&f4=alias&f5=short_desc&f7=CP&f8=CP&j1=OR&o2=substring&o3=substring&o4=substring&o5=substring&o6=substring&v2={}&v3={}&v4={}&v5={}&v6={}", product, product, product, product, product));
 }
 
@@ -60,12 +66,15 @@ struct BuggleFlags {
     twitter: bool,
 }
 
-async fn run_query(id : String, uri : hyper::Uri, flags : &BuggleFlags) -> BuggleResult {
+async fn run_query(id: String, uri: hyper::Uri, flags: &BuggleFlags) -> BuggleResult {
     if flags.verbose {
         println!("Query for {} = {}", id, uri.to_string());
     }
     if flags.dry_run {
-        return BuggleResult {id: id, count: None};
+        return BuggleResult {
+            id: id,
+            count: None,
+        };
     }
 
     let https = HttpsConnector::new();
@@ -73,7 +82,10 @@ async fn run_query(id : String, uri : hyper::Uri, flags : &BuggleFlags) -> Buggl
 
     let mut res = client.get(uri).await.ok().unwrap();
     if res.status() != 200 {
-        return BuggleResult {id: id, count: None};
+        return BuggleResult {
+            id: id,
+            count: None,
+        };
     }
 
     let mut count = 0;
@@ -83,13 +95,21 @@ async fn run_query(id : String, uri : hyper::Uri, flags : &BuggleFlags) -> Buggl
     }
     // There is a CSV header at the top, so if we got at least one line,
     // don't count the header.
-    if count > 0 { count -= 1; }
-    return BuggleResult {id: id, count: Some(count.try_into().unwrap())};
+    if count > 0 {
+        count -= 1;
+    }
+    return BuggleResult {
+        id: id,
+        count: Some(count.try_into().unwrap()),
+    };
 }
 
 #[tokio::main]
-async fn get_buggle_results(queries : Vec<config::Value>, flags : &BuggleFlags ) -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
-    let mut vec : Vec<BuggleResult> = Vec::with_capacity(queries.len());
+async fn get_buggle_results(
+    queries: Vec<config::Value>,
+    flags: &BuggleFlags,
+) -> Result<Vec<BuggleResult>, Box<dyn std::error::Error + Send + Sync>> {
+    let mut vec: Vec<BuggleResult> = Vec::with_capacity(queries.len());
 
     for q in queries {
         let kv = q.into_table().unwrap();
@@ -113,22 +133,27 @@ async fn get_buggle_results(queries : Vec<config::Value>, flags : &BuggleFlags )
 
 #[derive(Serialize)]
 struct TwitterStatus {
-    text : String,
+    text: String,
 }
 
 #[tokio::main]
-async fn send_twit_impl(text : String, token : &oauth::Token) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn send_twit_impl(
+    text: String,
+    token: &oauth::Token,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let uri = "https://api.twitter.com/2/tweets";
     // There are no POST parameters, send a unit; all the data is in JSON.
     let header = oauth::post(uri, &(), &token, oauth::HmacSha1);
     let body_data = TwitterStatus { text: text };
 
     let req = hyper::Request::builder()
-        .method(hyper:: Method::POST)
+        .method(hyper::Method::POST)
         .uri(uri)
         .header("content-type", "application/json")
         .header(hyper::header::AUTHORIZATION, header)
-        .body(hyper::Body::from(serde_json::to_string(&body_data).unwrap()))?;
+        .body(hyper::Body::from(
+            serde_json::to_string(&body_data).unwrap(),
+        ))?;
 
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
@@ -138,7 +163,7 @@ async fn send_twit_impl(text : String, token : &oauth::Token) -> Result<(), Box<
     return Ok(());
 }
 
-fn send_twit(text : String, token : &oauth::Token) {
+fn send_twit(text: String, token: &oauth::Token) {
     send_twit_impl(text, token).ok();
 }
 
@@ -146,8 +171,8 @@ fn send_twit(text : String, token : &oauth::Token) {
 //
 // Turns the results into a simple social-media-compatible string
 // that names the bug counts.
-fn summarize_buggle( v : Vec<BuggleResult> ) -> String {
-    let mut s : String = "Daily buggle: ".to_string();
+fn summarize_buggle(v: Vec<BuggleResult>) -> String {
+    let mut s: String = "Daily buggle: ".to_string();
     let mut c = v.len();
     for buggle in &v {
         let count_s = match buggle.count {
@@ -164,7 +189,9 @@ fn summarize_buggle( v : Vec<BuggleResult> ) -> String {
         c -= 1;
     }
 
-    if s.ends_with('/') { s.remove(1); }
+    if s.ends_with('/') {
+        s.remove(1);
+    }
     return s;
 }
 
@@ -178,8 +205,8 @@ fn main() {
         .build()
         .unwrap();
 
-    let args : Vec<String> = env::args().collect();
-    let flags = BuggleFlags{
+    let args: Vec<String> = env::args().collect();
+    let flags = BuggleFlags {
         verbose: args.contains(&"-V".to_string()) || args.contains(&"--verbose".to_string()),
         dry_run: args.contains(&"-n".to_string()) || args.contains(&"--dry-run".to_string()),
         twitter: args.contains(&"--twitter".to_string()),
@@ -191,11 +218,12 @@ fn main() {
     println!("{}", summary);
 
     if flags.twitter {
-        let token =  oauth::Token::from_parts(
+        let token = oauth::Token::from_parts(
             settings.get_string("twitter-app.key").ok().unwrap(),
             settings.get_string("twitter-app.secret").ok().unwrap(),
             settings.get_string("twitter-user.key").ok().unwrap(),
-            settings.get_string("twitter-user.secret").ok().unwrap());
+            settings.get_string("twitter-user.secret").ok().unwrap(),
+        );
         send_twit(summary, &token);
     }
 }
