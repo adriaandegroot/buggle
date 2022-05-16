@@ -4,6 +4,28 @@
 > from some bug-tracker query. In its most simple form, this does some
 > Bugzilla queries and then Tweets about it.
 
+### Usage
+
+- See `buggle.toml` for configuration keys. It can perform two kinds
+  of Bugzilla queries: per-product (e.g. "cmake"), and per-owner (e.g.
+  "adridg@FreeBSD"). The list of queries is executed on the FreeBSD
+  Bugzilla and results counted.
+- To use Twitter -- e.g. to send the results as a tweet -- set up the
+  authentication information. Don't put it in `buggle.toml` because that
+  might end up in version-control. Use `buggle-auth.toml` instead.
+  You will need an application key and secret, and your own user
+  key and secret.
+
+Run *buggle* to perform the queries, etc.:
+
+```
+cargo run
+```
+
+To send out a tweet, add the command-line argument `--twitter`. Other
+supported arguments are `--verbose` and `--dry-run`.
+
+
 ### Rationale
 
 I often check some FreeBSD Bugzilla queries and then Tweet about it.
@@ -15,6 +37,7 @@ straightforward, with some configuration parsing, an XML HTTP request
 and XML parsing, and then an HTTP request to post something.
 I did a brief check and there are libraries (crates, pardon my Rust)
 for at least some of that already.
+
 
 ### Get Involved
 
