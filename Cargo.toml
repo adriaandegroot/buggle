@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 config = {  version="0.13" }
-egg-mode = { version="0.16" }
 hyper = { version="0.14", features=["full"] }
 hyper-tls = { version="0.5" }
+oauth = { version = "0.5", package = "oauth1-request" }
 tokio = { version="1", features=["full"] }

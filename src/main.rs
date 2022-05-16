@@ -109,10 +109,30 @@ async fn get_buggle_results(queries : Vec<config::Value>, flags : &BuggleFlags )
 
 // === Social Media things
 
+#[derive(oauth::Request)]
+struct TwitterStatus<'a> {
+    text: &'a String,
+}
+
 #[tokio::main]
-async fn send_twit(message: String, token: egg_mode::Token) {
-    let draft = egg_mode::tweet::DraftTweet::new(message);
-    draft.send(&token).await.unwrap();
+async fn send_twit(text : String, token : &oauth::Token) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    let uri = "https://api.twitter.com/2/tweets";
+    let request = TwitterStatus { text : &text };
+    let header = oauth::post(uri, &request, &token, oauth::HmacSha1);
+
+    let req = hyper::Request::builder()
+        .method(hyper:: Method::POST)
+        .uri(uri)
+        .header("content-type", "application/json")
+        .header(hyper::header::AUTHORIZATION, header)
+        .body(hyper::Body::from(format!("{{\"text\":\"{}\"}}", text)))?;
+
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+    let resp = client.request(req).await?;
+
+    println!("Response: {}", resp.status());
+    return Ok(());
 }
 
 
@@ -172,15 +192,11 @@ fn main() {
     println!("{}", summary);
 
     if flags.twitter {
-        let con_token = egg_mode::KeyPair::new(settings.get_string("twitter-app.key").ok().unwrap(), settings.get_string("twitter-app.secret").ok().unwrap());
-        let access_token = egg_mode::KeyPair::new(settings.get_string("twitter-user.key").ok().unwrap(), settings.get_string("twitter-user.secret").ok().unwrap());
-        let token = egg_mode::Token::Access {
-            consumer: con_token,
-            access: access_token,
-        };
-
-        if !flags.dry_run {
-            send_twit(summary, token);
-        }
+        let token =  oauth::Token::from_parts(
+            settings.get_string("twitter-app.key").ok().unwrap(),
+            settings.get_string("twitter-app.secret").ok().unwrap(),
+            settings.get_string("twitter-user.key").ok().unwrap(),
+            settings.get_string("twitter-user.secret").ok().unwrap());
+        send_twit(summary, &token);
     }
 }
