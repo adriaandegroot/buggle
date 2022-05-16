@@ -109,23 +109,21 @@ async fn get_buggle_results(queries : Vec<config::Value>, flags : &BuggleFlags )
 
 // === Social Media things
 
-#[derive(oauth::Request)]
-struct TwitterStatus<'a> {
-    text: &'a String,
-}
-
 #[tokio::main]
 async fn send_twit(text : String, token : &oauth::Token) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let uri = "https://api.twitter.com/2/tweets";
-    let request = TwitterStatus { text : &text };
-    let header = oauth::post(uri, &request, &token, oauth::HmacSha1);
+    // There are no POST parameters, send a unit; all the data
+    // will be in JSON, which is handled as text below (and **that**
+    // only works because the summary string shouldn't contain
+    // any special characters).
+    let header = oauth::post(uri, &(), &token, oauth::HmacSha1);
 
     let req = hyper::Request::builder()
         .method(hyper:: Method::POST)
         .uri(uri)
         .header("content-type", "application/json")
         .header(hyper::header::AUTHORIZATION, header)
-        .body(hyper::Body::from(format!("{{\"text\":\"{}\"}}", text)))?;
+        .body(hyper::Body::from(format!("{{\"text\": \"{}\"}}", text)))?;
 
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
