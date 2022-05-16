@@ -10,6 +10,7 @@ use hyper::body::HttpBody as _;
 use hyper::Client;
 use hyper_tls::HttpsConnector;
 use serde::Serialize;
+use std::env;
 
 // === Query Builders
 //
@@ -169,14 +170,6 @@ fn summarize_buggle( v : Vec<BuggleResult> ) -> String {
 
 // === Option Handling
 //
-// There's a whole machinery for mapping things into structs
-// that doesn't match my C++ brain.
-fn optbool(settings : &Config, key : &str, d : bool) -> bool {
-return match settings.get_bool(key) {
-            Err(_) => d,
-            Ok(v) => v
-        };
-}
 
 fn main() {
     let settings = Config::builder()
@@ -185,10 +178,11 @@ fn main() {
         .build()
         .unwrap();
 
+    let args : Vec<String> = env::args().collect();
     let flags = BuggleFlags{
-        verbose: optbool(&settings, "verbose", true),
-        dry_run: optbool(&settings, "dry-run", true),
-        twitter: optbool(&settings, "twitter", false),
+        verbose: args.contains(&"-V".to_string()) || args.contains(&"--verbose".to_string()),
+        dry_run: args.contains(&"-n".to_string()) || args.contains(&"--dry-run".to_string()),
+        twitter: args.contains(&"--twitter".to_string()),
     };
 
     let queries = settings.get_array("queries").unwrap();
