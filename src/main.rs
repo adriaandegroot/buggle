@@ -35,7 +35,7 @@ fn build_query(q: String) -> hyper::Uri {
 
 fn build_assigned_query(email: String) -> hyper::Uri {
     return build_query(format!(
-        "email1={}&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&resolution=---",
+        "email1={}&emailassigned_to1=1&emailreporter1=1&emailtype1=substring&resolution=---",
         email
     ));
 }
