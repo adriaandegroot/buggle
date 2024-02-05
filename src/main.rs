@@ -179,12 +179,15 @@ fn summarize_buggle(v: Vec<BuggleResult>) -> String {
             None => "?".to_string(),
             Some(n) => format!("{}", n),
         };
+        if s.ends_with('/') {
+            s += " ";
+        }
         s += &count_s;
-        s += "(";
+        s += " (";
         s += &buggle.id;
         s += ")";
         if c > 1 {
-            s += "/";
+            s += " /";
         }
         c -= 1;
     }
